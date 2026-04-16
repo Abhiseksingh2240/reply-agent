@@ -29,11 +29,9 @@ See `.env.example`. Required for full agent behavior:
 
 If OpenRouter keys are missing, the pipeline still runs using **heuristic fusion** (no network calls) so CI and dry runs stay reproducible.
 
-**Security:** never commit real keys. If keys were pasted into a chat or ticket, rotate them in the provider dashboards.
-
 ## Commands
 
-From the `fraud_agent` directory (so `app` is importable):
+From the `fraud_agent` directory:
 
 ```bash
 python -m app.main build-features --data-dir "path/to/dataset"
@@ -43,14 +41,12 @@ python -m app.main run --data-dir "path/to/dataset" --output ./outputs/preds.txt
 
 Useful flags on `review` / `run`:
 
-- `--review-budget N` — cap LLM-reviewed transactions (each shortlisted row runs the specialist stack + arbitration).
+- `--review-budget N` — cap LLM-reviewed transactions.
 - `--mode adaptive|fixed|top_k|percentile` with `--threshold`, `--top-k`, or `--percentile`.
-- `--enable-audio` — attach linked audio file metadata (paths, sizes, optional transcript excerpts) to the audio agent payload.
-- `--enable-transcription` — set `ENABLE_AUDIO_TRANSCRIPTION` for this run. When enabled with `--enable-audio`, high-risk / high-value shortlisted rows trigger **OpenRouter `input_audio` transcription** (base64, format from extension). Results are cached in `data_cache/.../audio_transcripts.json` by file fingerprint. The four specialist agents and pending transcriptions run **in one thread pool** to overlap network latency.
-- `--llm-workers N` — override `LLM_PARALLEL_WORKERS` for this run (when `N > 0`).
+- `--enable-audio` — attach linked audio metadata to the audio agent payload.
+- `--enable-transcription` — enable high-risk audio transcription with cached transcript excerpts.
+- `--llm-workers N` — override `LLM_PARALLEL_WORKERS` for this run.
 - `--force` / `--force-rescore` — rebuild normalized caches.
-
-Environment knobs: `OPENROUTER_MODEL_TRANSCRIPTION` (must support audio input on OpenRouter), `AUDIO_TRANSCRIPTION_MAX_BYTES`, `AUDIO_TRANSCRIPTION_MAX_FILES`, `LLM_PARALLEL_WORKERS`.
 
 ## Outputs and submission
 
@@ -58,10 +54,8 @@ After `run` or `review`:
 
 - Predictions: `--output` path (UTF-8, one `transaction_id` per line).
 - Copy for naming convenience: `outputs/fraudulent_transactions.txt`.
-- Langfuse session id: `outputs/langfuse_session_id.txt` (also printed to stdout).
-- Run metadata: `outputs/run_summary.json` (includes `audio_transcription_calls`: OpenRouter transcription requests excluding cache hits).
-
-Evaluation zip should include **complete source**, `requirements.txt`, `.env.example`, and this README with the same commands.
+- Langfuse session id: `outputs/langfuse_session_id.txt`.
+- Run metadata: `outputs/run_summary.json`.
 
 ## Tests
 
@@ -69,9 +63,3 @@ Evaluation zip should include **complete source**, `requirements.txt`, `.env.exa
 set PYTHONPATH=%CD%
 python -m pytest
 ```
-
-## Generalization notes
-
-Rules avoid dataset-specific hardcoding (no fixed IBANs, cities, or challenge IDs). Phishing, mobility, and monetary signals are expressed as **relative** behaviors (salary ratios, rolling activity, text heuristics, time windows).
-
-Transcription runs only when audio is enabled, transcription is enabled, and the row meets **risk gates** (`llm_review_priority == high`, or `base_risk_score` / `economic_risk_score` above configurable thresholds in code) so API spend stays focused on ambiguous or high-impact cases.
