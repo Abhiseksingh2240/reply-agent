@@ -1,0 +1,15 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+data_cache/
+outputs/*.txt
+outputs/*.json
+!outputs/.gitkeep
+*.parquet
+.DS_Store
+*.zip
